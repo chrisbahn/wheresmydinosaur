@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+{% block map %}
+
+<p></p>
+<h2> Results for "{{ searchTerm }}"</h2>
+    {% with map=googlemap_obj("paleomap", centerLat, centerLng, maptype='terrain', zoom=zoomNumber, style='height:600px;width:100%;margin:0;', markers=markers) %}
+    {{map.html}}
+    {{map.js}}
+    {% endwith %}
+    <p></p>
+    {{ ResultsFound }} fossils found at these coordinates:<br>
+          {% for line in fossilResults %}
+             &#0149; <b style='color:red;'>{{ line.fossilName }}</b>: {{ line.location }} ({{ line.coordinatePairs[0] }}, {{ line.coordinatePairs[1] }}), {{ line.age }}<br>
+          {% endfor %}
+
+
+
+{% endblock %}
+

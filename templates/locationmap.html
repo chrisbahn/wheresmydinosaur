@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+{% block map %}
+
+<h2> Results for "{{ searchLocation }}"</h2>
+{% with map=googlemap_obj("paleomap", gLatJson, gLngJson, maptype='terrain', zoom=zoomNumber, style='height:600px;width:100%;margin:0;', markers=latlonglist, label='My Location') %}
+{{map.html}}
+{{map.js}}
+{% endwith %}
+<p></p>
+Fossils found at these coordinates:<br>
+      {% for line in latlonglist %}
+         Lat: {{ line[0] }}, Long: {{ line[1] }}<br>
+      {% endfor %}
+
+
+
+{% endblock %}
+
