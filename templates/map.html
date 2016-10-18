@@ -9,7 +9,7 @@
     {% endwith %}
     <p></p>
     {{ ResultsFound }} fossils found at these coordinates:<br>
-          {% for line in fossilResults %}
+          {% for line in allFossils %}
              &#0149; <b style='color:red;'>{{ line.fossilName }}</b>: {{ line.location }} ({{ line.coordinatePairs[0] }}, {{ line.coordinatePairs[1] }}), {{ line.age }}<br>
           {% endfor %}
 
