@@ -129,8 +129,116 @@ class SQLAFossil(db.Model):
         self.paleoenv = paleoenv
         self.geocomments = geocomments
 
-def JSONtoSQLAconversion(lat,lng,taxonName,trank_phylum,trank_class,trank_order,trank_family,trank_genus,nation,state,county,geologicAge,paleoenv,max_ma,min_ma,geocomments):
-    # TODO. This takes the raw JSON variables from paleobiodbRecordsJson, created in paleoSearch(), and creates a set of SQLAFossil objects for mapping, etc.
+
+@app.route('/')
+def start_here():
+    name = "Zoe and Beatrice" # TODO Placeholder so I don't have to enter a name each time I restart the page
+    if (name == None):
+        getName()
+    return render_template('home.html', name=name, searchresults=None)
+
+@app.route('/getname')
+def getName():
+    name = request.args.get('getname')
+    return render_template('home.html', name=name, searchresults=None)
+
+def paleoSearch(paleobiodbURL,searchRadius):
+    clear_db() # Cleans out old search results so that the new search begins on a fresh slate
+    paleobiodbResponse = urllib.request.urlopen(paleobiodbURL)
+    paleobiodbResponseJSONString = paleobiodbResponse.read().decode('UTF-8')
+    paleobiodbResponseJson = json.loads(paleobiodbResponseJSONString)
+    if ('warnings' in paleobiodbResponseJson):
+        warning = paleobiodbResponseJson['warnings'][0]
+        print(warning)
+        # TODO Error if no exact search result match: "TypeError: 'Response' object is not subscriptable". Not sure why, this should be caught by the "warnings" flag...
+        flash(warning + ". Please try again.")
+        return redirect(url_for('start_here'))
+    else:
+        paleobiodbRecordsJson = paleobiodbResponseJson['records']
+        ResultsFound = paleobiodbResponseJson['records_found']
+        for taxonResult in paleobiodbRecordsJson: # For-loop to draw just the wanted data (lat, lng, etc) out of the JSON response, filtering out blanks and other unusable data. The good data is then turned into a SQL Alchemy Fossil object
+            filterPaleobiodbResponseJson(taxonResult)
+            # For possible future expansion: JSON results contain more data about each fossil find than I'm using. See https://paleobiodb.org/data1.2/occs/list_doc.html
+    allFossils = SQLAFossil.query.all()
+    markers = get_markers(allFossils) # This will replace latlonglist
+    # TODO Create GoogleMapQueryStatement from fossilResults; this replaces latlonglist, which is misnamed if it also has complex marker info which takes most of the effort of creating the GMQS. It should also have the zoomNumber
+    # TODO Create pageTextList from fossilResults. bold/ital/color/links will be created on the html pages, so this needs to make the stuff that goes inside that. Also includes ResultsFound
+
+    if (searchRadius == None):
+        zoomNumber = 4
+    elif (searchRadius >= 6):
+        zoomNumber=6
+    elif (searchRadius >= 3):
+        zoomNumber = 7
+    elif (searchRadius == 2):
+        zoomNumber=8
+    else:
+        zoomNumber=9
+    return {'zoomNumber': zoomNumber, 'ResultsFound': ResultsFound, 'markers': markers, 'allFossils': allFossils}
+
+def filterPaleobiodbResponseJson(taxonResult): # TODO This needs to return data to plug back into Fossil object
+    lat = float(taxonResult['lat'])
+    lng = float(taxonResult['lng'])
+    if ('tna' in taxonResult):
+        taxonName = str(taxonResult['tna'])
+    else:
+        taxonName = None
+    if ('phl' in taxonResult):
+        trank_phylum = str(taxonResult['phl'])
+    else:
+        trank_phylum = None
+    if ('cll' in taxonResult):
+        trank_class = str(taxonResult['cll'])
+    else:
+        trank_class = None
+    if ('odl' in taxonResult):
+        trank_order = str(taxonResult['odl'])
+    else:
+        trank_order = None
+    if ('fml' in taxonResult):
+        trank_family = str(taxonResult['fml'])
+    else:
+        trank_family = None
+    if ('gnl' in taxonResult):
+        trank_genus = str(taxonResult['gnl'])
+    else:
+        trank_genus = None
+    if ('cc2' in taxonResult):
+        nation = str(taxonResult['cc2'])
+    else:
+        nation = None
+    if ('stp' in taxonResult):
+        state = str(taxonResult['stp'])
+    else:
+        state = None
+    if ('cny' in taxonResult):
+        county = str(taxonResult['cny'])
+    else:
+        county = None
+    if ('oei' in taxonResult):
+        geologicAge = str(taxonResult['oei'])
+    else:
+        geologicAge = None
+    if ('env' in taxonResult):
+        paleoenv = str(taxonResult['env'])
+    else:
+        paleoenv = None
+    if ('eag' in taxonResult):
+        max_ma = float(taxonResult['eag'])
+    else:
+        max_ma = None
+    if ('lag' in taxonResult):
+        min_ma = float(taxonResult['lag'])
+    else:
+        min_ma = None
+    if ('ggc' in taxonResult):
+        geocomments = str(taxonResult['ggc'])
+    else:
+        geocomments = None
+    create_fossil_objects(lat, lng, taxonName, trank_phylum, trank_class, trank_order, trank_family, trank_genus, nation, state, county, geologicAge, paleoenv, max_ma, min_ma, geocomments)  # Creates a SQLAFossil object
+
+def create_fossil_objects(lat,lng,taxonName,trank_phylum,trank_class,trank_order,trank_family,trank_genus,nation,state,county,geologicAge,paleoenv,max_ma,min_ma,geocomments):
+    # This takes the raw JSON variables from paleobiodbRecordsJson, created in paleoSearch(), and creates a set of SQLAFossil objects for mapping, etc.
     coordinatePairs = [lat, lng]  # lat/long
     fossilName = getfossilName(taxonName, trank_phylum, trank_class, trank_order, trank_family,trank_genus)  # This is the fossil's display name
     taxonomy = getTaxonomy(trank_phylum, trank_class, trank_order, trank_family,trank_genus)  # This is the fossil's tree-of-life designations, to be used in behind-the-scenes filtering
@@ -147,8 +255,7 @@ def JSONtoSQLAconversion(lat,lng,taxonName,trank_phylum,trank_class,trank_order,
     db.session.commit()
     return newFossil # DO I NEED TO RETURN ANYTHING?
 
-# Currently: JSON data is filtered and the needed variables are stored in SQLiteDB. SQLiteDB is then sent to create_fossil_objects(), which performs 1 set of operations to convert SQLite data into the elements that make up a Fossil object. Fossil objects are created and stored in FossilResults[]. FossilResults[] also creates the dictionary "markers," which is what GoogleMaps needs to create pins.
-# New plan using SQLAlchemy: JSON still sends filtered data to SQLite for caching. The cache should be set up so that SQLAlchemy will receive the data from cache in the same format as if it was raw JSON. The raw JSON is ALSO converted directly into SQLAFossil() objects, which are stored in the new SQLAlchemy db.
+# How data flows in this program: A structured query to paleoBioDB gets back JSON data, which is then filtered into SQL ALchemy Fossil objects, which are then used to create Google Maps markers and basic display info on what the fossil is. NOTE: The set of Fossil objects is erased before each new search, in order to make it easier to handle the information. However, you could do more with your data set if you cached older searches and created a growing database. You'd need to write a method to ensure that a new JSON search would only create new Fossil objects if they didn't duplicate ones already in the system, but still display the full results of a search.
 
 
 def getNationFromISO3166(nation):
@@ -206,6 +313,8 @@ def getfossilName(taxonName,trank_phylum,trank_class,trank_order,trank_family,tr
             fossilName = "Trilobite (genus unidentified)"
         else:
             fossilName = "Trilobite (genus " + trank_genus + ")"
+    elif (trank_class == 'Aves'):
+        fossilName = "Bird (genus " + taxonName + ")"
     elif (trank_genus == None):
         fossilName = taxonName
     elif (taxonName == None):
@@ -221,11 +330,9 @@ def getTaxonomy(trank_phylum, trank_class, trank_order, trank_family, trank_genu
     return taxonomy
 
 def getGeologicAge(geologicAge,max_ma,min_ma):
-    # TODO Rewrite this so that if less than 1 mya, it should display as thousands instead
     if (geologicAge == None):
         age = "Geologic age unknown"
     else:
-        print (max_ma)
         if (max_ma < 1):
             if (min_ma != None):
                 age = geologicAge + " (approx. " + str(round(((max_ma+min_ma)/2)*1000,2)) + " thousand years ago)"
@@ -238,117 +345,9 @@ def getGeologicAge(geologicAge,max_ma,min_ma):
                 age = geologicAge + " (approx. " + str(max_ma) + " million years ago)"
         else:
             age = geologicAge
-        # TODO Import this list https://paleobiodb.org/data1.2/intervals/list.txt?scale=1 as a second SQLite table and use it to match the max_ma/min_ma numbers to a scale_level 2/3/4 string.
+        # TODO Import this list https://paleobiodb.org/data1.2/intervals/list.txt?scale=1 as a second table and use it to match the max_ma/min_ma numbers to a scale_level 2/3/4 string.
     return age
 
-
-@app.route('/')
-def start_here():
-    name = "Zoe and Beatrice" # TODO Placeholder so I don't have to enter a name each time I restart the page
-    if (name == None):
-        getName()
-    return render_template('home.html', name=name, searchresults=None)
-
-@app.route('/getname')
-def getName():
-    name = request.args.get('getname')
-    return render_template('home.html', name=name, searchresults=None)
-
-def paleoSearch(paleobiodbURL,searchRadius):
-    clear_db() # Cleans out old search results so that the new search begins on a fresh slate
-    paleobiodbResponse = urllib.request.urlopen(paleobiodbURL)
-    paleobiodbResponseJSONString = paleobiodbResponse.read().decode('UTF-8')
-    paleobiodbResponseJson = json.loads(paleobiodbResponseJSONString)
-    if ('warnings' in paleobiodbResponseJson):
-        warning = paleobiodbResponseJson['warnings'][0]
-        print(warning)
-        # TODO Error if no exact search result match: "TypeError: 'Response' object is not subscriptable". Not sure why, this should be caught by the "warnings" flag...
-        flash(warning + ". Please try again.")
-        return redirect(url_for('start_here'))
-    else:
-        paleobiodbRecordsJson = paleobiodbResponseJson['records']
-        ResultsFound = paleobiodbResponseJson['records_found']
-        # For-loop to draw data (lat, lng, etc) out of the JSON response and create SQLite DB:
-        for taxonResult in paleobiodbRecordsJson:
-            lat = float(taxonResult['lat'])
-            lng = float(taxonResult['lng'])
-            if ('tna' in taxonResult):
-                taxonName = str(taxonResult['tna'])
-            else:
-                taxonName = None
-            if ('phl' in taxonResult):
-                trank_phylum = str(taxonResult['phl'])
-            else:
-                trank_phylum = None
-            if ('cll' in taxonResult):
-                trank_class = str(taxonResult['cll'])
-            else:
-                trank_class = None
-            if ('odl' in taxonResult):
-                trank_order = str(taxonResult['odl'])
-            else:
-                trank_order = None
-            if ('fml' in taxonResult):
-                trank_family = str(taxonResult['fml'])
-            else:
-                trank_family = None
-            if ('gnl' in taxonResult):
-                trank_genus = str(taxonResult['gnl'])
-            else:
-                trank_genus = None
-            if ('cc2' in taxonResult):
-                nation = str(taxonResult['cc2'])
-            else:
-                nation = None
-            if ('stp' in taxonResult):
-                state = str(taxonResult['stp'])
-            else:
-                state = None
-            if ('cny' in taxonResult):
-                county = str(taxonResult['cny'])
-            else:
-                county = None
-            if ('oei' in taxonResult):
-                geologicAge = str(taxonResult['oei'])
-            else:
-                geologicAge = None
-            if ('env' in taxonResult):
-                paleoenv = str(taxonResult['env'])
-            else:
-                paleoenv = None
-            if ('eag' in taxonResult):
-                max_ma = float(taxonResult['eag'])
-            else:
-                max_ma = None
-            if ('lag' in taxonResult):
-                min_ma = float(taxonResult['lag'])
-            else:
-                min_ma = None
-            if ('ggc' in taxonResult):
-                geocomments = str(taxonResult['ggc'])
-            else:
-                geocomments = None
-            JSONtoSQLAconversion(lat,lng,taxonName,trank_phylum,trank_class,trank_order,trank_family,trank_genus,nation,state,county,geologicAge,paleoenv,max_ma,min_ma,geocomments) # Creates a SQLAFossil object
-            # add_fossildata_to_db(lat,lng,taxonName,trank_phylum,trank_class,trank_order,trank_family,trank_genus,nation,state,county,geologicAge,paleoenv,max_ma,min_ma,geocomments)
-            # For possible future expansion: Much more data than this is pulled due to the show=full setting. https://paleobiodb.org/data1.2/occs/list_doc.html
-            # print (lat,lng,taxonName,trank_phylum,trank_class,trank_order,trank_family,trank_genus,nation,state,county,geologicAge,paleoenv,max_ma,min_ma,geocomments)
-    allFossils = SQLAFossil.query.all()
-    # fossilResults = create_fossil_objects()
-    markers = get_markers(allFossils) # This will replace latlonglist
-    # TODO Create GoogleMapQueryStatement from fossilResults; this replaces latlonglist, which is misnamed if it also has complex marker info which takes most of the effort of creating the GMQS. It should also have the zoomNumber
-    # TODO Create pageTextList from fossilResults. bold/ital/color/links will be created on the html pages, so this needs to make the stuff that goes inside that. Also includes ResultsFound
-
-    if (searchRadius == None):
-        zoomNumber = 4
-    elif (searchRadius >= 6):
-        zoomNumber=6
-    elif (searchRadius >= 3):
-        zoomNumber = 7
-    elif (searchRadius == 2):
-        zoomNumber=8
-    else:
-        zoomNumber=9
-    return {'zoomNumber': zoomNumber, 'ResultsFound': ResultsFound, 'markers': markers, 'allFossils': allFossils}
 
 def get_markers(allFossils):
     coords_and_mapFlag_List = []
@@ -374,7 +373,6 @@ def get_markers(allFossils):
             icon = '/static/images/mapicons/cartoon_caveman.ico'
         else:
             icon = '/static/images/mapicons/townspeople-dinosaur-icon.png'
-
         icon_coords_and_mapFlag = { 'icon': icon, 'lat': coordinatePairs[0], 'lng': coordinatePairs[1], 'infobox': mapflagCaption }
         # Full HTML flag: coordinatePairs = [row[1],row[2],("Hello I am <b style='color:#ffcc00;'> YELLOW </b>!" "<h2>It is HTML title</h2>" "<img src='//placehold.it/50'>""<br>Images allowed!")]
         # print ("coords_and_mapFlag: " + str(coords_and_mapFlag))
@@ -383,15 +381,15 @@ def get_markers(allFossils):
     return markers
 
 @app.route('/fossilsearch')
-def fossilsearch(): # TODO This combines searchbytaxon and searchbylocation into a single function. ... Search restrictions (chordates, dinosaurs, etc.) must be built into the paleobiodbURL, so you'll need to construct it as a composite string. Is it possible to construct taxonquery and locationquery in the same method? Would be useful to be able to find "all sauropods in Europe," etc. If so, you could merge @app.route('/searchbytaxon') and @app.route('/searchbylocation') ... Dinosaurs + commonly accepted "relatives" = "saurischia,Ornithischia,plesiosauria,ichthyosauria,pterosauria" ... Hominids = "Hominidae" and then you'll need to pull species data from the returns if possible, so you can get "Homo habilis" etc. ... re: Chordates, would it be better to have that as the DEFAULT setting, and that way the user doesn't get a bunch of boring plants and insects all the time?
-    # TODO You'll need a complex captionConstructor to direct to useful wikipedia (etc) links. Also, your layout should ideally include the Wiki page within your own document, and not send user away elsewhere.
-
+def fossilsearch(): # TODO would it be better to have "chordata" as the DEFAULT setting, and that way the user doesn't get a bunch of boring plants and insects all the time?
+    # TODO You'll need a complex captionConstructor to direct to useful wikipedia links. Also, your layout should ideally include the Wiki page within your own document, and not send user away elsewhere.
     # TODO: Create a set of preselected searches for popular dinos/beasts, with small icons to click on.
     if (request.args.get('taxonquery') or request.args.get('taxonradio')):
-        if (request.args.get('taxonquery')):
+        if (request.args.get('taxonquery')): # Typing something in the search box overrides the radiobuttons
             searchTaxon = request.args.get('taxonquery')
         else:
-            searchTaxon = request.args.get('taxonradio')
+            taxonRadioResult = request.args.get('taxonradio')
+            searchTaxon = getTaxonRadioSearchString(taxonRadioResult)
     else:
         searchTaxon = None
     if (request.args.get('locationquery')):
@@ -422,6 +420,38 @@ def fossilsearch(): # TODO This combines searchbytaxon and searchbylocation into
         searchCenter = {'icon': '/static/images/mapicons/my_house.png', 'lat': centerLat, 'lng': centerLng, 'infobox': "Your chosen <b style='color:#00cc00;'> centerpoint </b>!" "<h2>It is HTML title</h2>" "<img src='/static/images/mapicons/tardis_by_pirate_elf.gif'>""<br><a href=https://en.wikipedia.org/wiki/Main_Page target='_blank'>Images allowed!</a>"}
         markers.append(searchCenter)
     return render_template('map.html', centerLat=centerLat, centerLng=centerLng, searchTerm=searchTaxon, zoomNumber=zoomNumber, markers=markers, ResultsFound=ResultsFound, allFossils=allFossils)
+
+def getTaxonRadioSearchString(taxonRadioResult):
+    if taxonRadioResult == 'chordates':
+        return "chordata"
+    elif taxonRadioResult == 'dinosaursandfriends':
+        return "saurischia,ornithischia,plesiosauria,ichthyosauria,pterosauria"
+    elif taxonRadioResult == 'dinosaurs':
+        return "saurischia,ornithischia"
+    elif taxonRadioResult == 'sauropods':
+        return "sauropoda"
+    elif taxonRadioResult == 'theropods':
+        return "Theropoda"
+    elif taxonRadioResult == 'stegosaurs':
+        return "Stegosauria"
+    elif taxonRadioResult == 'ankylosaurs':
+        return "ankylosauria"
+    elif taxonRadioResult == 'hadrosaurs':
+        return "hadrosauria"
+    elif taxonRadioResult == 'ceratopsians':
+        return "ceratopsia"
+    elif taxonRadioResult == 'plesioichthyosauria':
+        return "plesiosauria,ichthyosauria"
+    elif taxonRadioResult == 'pterosauria':
+        return "pterosauria"
+    elif taxonRadioResult == 'birds':
+        return "Aves"
+    elif taxonRadioResult == 'mammals':
+        return "mammalia"
+    elif taxonRadioResult == 'hominids':
+        return "Hominidae"
+    elif taxonRadioResult == 'trilobites':
+        return "Trilobita"
 
 def getbaseNameString(searchTaxon):
     # This downloads the JSON data for a species search from PaleoBioDB. "taxon_name" returns just that taxon, while "base_name" returns taxon + all subtaxa (genus/species names). Search multiple taxa with comma separator. Wildcards include %: "Stegosaur%" pulls up both Stegosaurus and Stegosauridae. https://paleobiodb.org/data1.2/general/taxon_names_doc.htm

@@ -15,7 +15,17 @@
     What do you want to find?<br><br>
     <b><span id='taxonquery'></span>
     <span id="JustChordates" style="display: none">chordates</span>
+    <span id="JustDinosAndFriends" style="display: none">dinosaurs and their relatives</span>
     <span id="JustDinos" style="display: none">dinosaurs</span>
+    <span id="JustSauropods" style="display: none">sauropods</span>
+    <span id="JustTheropods" style="display: none">theropods</span>
+    <span id="JustStegosaurs" style="display: none">stegosaurs</span>
+    <span id="JustAnkylosaurs" style="display: none">ankylosaurs</span>
+    <span id="JustHadrosaurs" style="display: none">hadrosaurs</span>
+    <span id="JustCeratopsians" style="display: none">ceratopsians</span>
+    <span id="JustPlesioichthyosauria" style="display: none">plesiosaurs and ichthyosaurs</span>
+    <span id="JustPterosauria" style="display: none">pterosaurs</span>
+    <span id="JustBirds" style="display: none">birds</span>
     <span id="JustTrilobites" style="display: none">trilobites</span>
     <span id="JustMammals" style="display: none">mammals</span>
     <span id="JustHominids" style="display: none">hominids</span>
@@ -32,16 +42,40 @@
  <fieldset>
     Restrict search to just these fossils:<br>
         <label for="chkJustChordates"><input type="radio" name="taxonradio" id="chkJustChordates" value="chordates" onclick="ShowHideDiv()"> Chordates (animals with backbones)</label><br>
-        <label for="chkJustDinos"><input type="radio" name="taxonradio" id="chkJustDinos" value="dinosaurs" onclick="ShowHideDiv()"> Dinosaurs</label><br>
-        <label for="chkJustTrilobites"><input type="radio" name="taxonradio" id="chkJustTrilobites" value="trilobites" onclick="ShowHideDiv()"> Trilobites</label><br>
+        <label for="chkJustDinosAndFriends"><input type="radio" name="taxonradio" id="chkJustDinosAndFriends" value="dinosaursandfriends" onclick="ShowHideDiv()"> Dinosaurs (and their close relatives)</label><br>
+             <fieldset>
+             <fieldset>
+            <label for="chkJustDinos"><input type="radio" name="taxonradio" id="chkJustDinos" value="dinosaurs" onclick="ShowHideDiv()"> All dinosaurs</label><br>
+            <label for="chkJustSauropods"><input type="radio" name="taxonradio" id="chkJustSauropods" value="sauropods" onclick="ShowHideDiv()"> Sauropods(<i>Brachiosaurus</i>, etc.)</label><br>
+            <label for="chkJustTheropods"><input type="radio" name="taxonradio" id="chkJustTheropods" value="theropods" onclick="ShowHideDiv()"> Theropods (<i>Tyrannosaurus</i>, etc.)</label><br>
+            <label for="chkJustStegosaurs"><input type="radio" name="taxonradio" id="chkJustStegosaurs" value="stegosaurs" onclick="ShowHideDiv()"> Stegosaurs</label><br>
+            <label for="chkJustAnkylosaurs"><input type="radio" name="taxonradio" id="chkJustAnkylosaurs" value="ankylosaurs" onclick="ShowHideDiv()"> Ankylosaurs</label><br>
+            <label for="chkJustHadrosaurs"><input type="radio" name="taxonradio" id="chkJustHadrosaurs" value="hadrosaurs" onclick="ShowHideDiv()"> Hadrosaurs (duckbills)</label><br>
+            <label for="chkJustCeratopsians"><input type="radio" name="taxonradio" id="chkJustCeratopsians" value="ceratopsians" onclick="ShowHideDiv()"> Ceratopsians (<i>Triceratops</i>, etc.)</label><br>
+             </fieldset>
+            <label for="chkJustPlesioichthyosauria"><input type="radio" name="taxonradio" id="chkJustPlesioichthyosauria" value="plesioichthyosauria" onclick="ShowHideDiv()"> Plesiosaurs and Ichthyosaurs</label><br>
+            <label for="chkJustPterosauria"><input type="radio" name="taxonradio" id="chkJustPterosauria" value="pterosauria" onclick="ShowHideDiv()"> Pterosaurs</label><br>
+             </fieldset>
+        <label for="chkJustBirds"><input type="radio" name="taxonradio" id="chkJustBirds" value="birds" onclick="ShowHideDiv()"> Birds</label><br>
         <label for="chkJustMammals"><input type="radio" name="taxonradio" id="chkJustMammals" value="mammals" onclick="ShowHideDiv()"> Mammals</label><br>
         <label for="chkJustHominids"><input type="radio" name="taxonradio" id="chkJustHominids" value="hominids" onclick="ShowHideDiv()"> Hominids (ancient humans and their relatives)</label><br>
+        <label for="chkJustTrilobites"><input type="radio" name="taxonradio" id="chkJustTrilobites" value="trilobites" onclick="ShowHideDiv()"> Trilobites</label><br>
         <script type="text/javascript"> function ShowHideDiv() {
         var chkJustChordates = document.getElementById("chkJustChordates"); var JustChordates = document.getElementById("JustChordates"); JustChordates.style.display = chkJustChordates.checked ? "block" : "none";
+        var chkJustDinosAndFriends = document.getElementById("chkJustDinosAndFriends"); var JustDinosAndFriends = document.getElementById("JustDinosAndFriends"); JustDinosAndFriends.style.display = chkJustDinosAndFriends.checked ? "block" : "none";
         var chkJustDinos = document.getElementById("chkJustDinos"); var JustDinos = document.getElementById("JustDinos"); JustDinos.style.display = chkJustDinos.checked ? "block" : "none";
-        var chkJustTrilobites = document.getElementById("chkJustTrilobites"); var JustTrilobites = document.getElementById("JustTrilobites"); JustTrilobites.style.display = chkJustTrilobites.checked ? "block" : "none";
+        var chkJustSauropods = document.getElementById("chkJustSauropods"); var JustSauropods = document.getElementById("JustSauropods"); JustSauropods.style.display = chkJustSauropods.checked ? "block" : "none";
+        var chkJustTheropods = document.getElementById("chkJustTheropods"); var JustTheropods = document.getElementById("JustTheropods"); JustTheropods.style.display = chkJustTheropods.checked ? "block" : "none";
+        var chkJustStegosaurs = document.getElementById("chkJustStegosaurs"); var JustStegosaurs = document.getElementById("JustStegosaurs"); JustStegosaurs.style.display = chkJustStegosaurs.checked ? "block" : "none";
+        var chkJustAnkylosaurs = document.getElementById("chkJustAnkylosaurs"); var JustAnkylosaurs = document.getElementById("JustAnkylosaurs"); JustAnkylosaurs.style.display = chkJustAnkylosaurs.checked ? "block" : "none";
+        var chkJustHadrosaurs = document.getElementById("chkJustHadrosaurs"); var JustHadrosaurs = document.getElementById("JustHadrosaurs"); JustHadrosaurs.style.display = chkJustHadrosaurs.checked ? "block" : "none";
+        var chkJustCeratopsians = document.getElementById("chkJustCeratopsians"); var JustCeratopsians = document.getElementById("JustCeratopsians"); JustCeratopsians.style.display = chkJustCeratopsians.checked ? "block" : "none";
+        var chkJustPlesioichthyosauria = document.getElementById("chkJustPlesioichthyosauria"); var JustPlesioichthyosauria = document.getElementById("JustPlesioichthyosauria"); JustPlesioichthyosauria.style.display = chkJustPlesioichthyosauria.checked ? "block" : "none";
+        var chkJustPterosauria = document.getElementById("chkJustPterosauria"); var JustPterosauria = document.getElementById("JustPterosauria"); JustPterosauria.style.display = chkJustPterosauria.checked ? "block" : "none";
+        var chkJustBirds = document.getElementById("chkJustBirds"); var JustBirds = document.getElementById("JustBirds"); JustBirds.style.display = chkJustBirds.checked ? "block" : "none";
         var chkJustMammals = document.getElementById("chkJustMammals"); var JustMammals = document.getElementById("JustMammals"); JustMammals.style.display = chkJustMammals.checked ? "block" : "none";
         var chkJustHominids = document.getElementById("chkJustHominids"); var JustHominids = document.getElementById("JustHominids"); JustHominids.style.display = chkJustHominids.checked ? "block" : "none";
+        var chkJustTrilobites = document.getElementById("chkJustTrilobites"); var JustTrilobites = document.getElementById("JustTrilobites"); JustTrilobites.style.display = chkJustTrilobites.checked ? "block" : "none";
         }</script>
  </fieldset>
  </div>
