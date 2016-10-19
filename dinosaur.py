@@ -366,10 +366,23 @@ def get_markers(allFossils):
         if (taxonomy['class'] == 'Trilobita'):
             icon = '/static/images/mapicons/trilobite.png'
         elif (taxonomy['class'] == 'Ornithischia'):
-            icon = '/static/images/mapicons/stegosaurus.png'
+            if (taxonomy['order'] == 'Thyreophora'):
+                icon = '/static/images/mapicons/stegosaurus.png'
+            elif (taxonomy['family'] == 'Ceratopsidae'):
+                icon = '/static/images/mapicons/triceratops.png'
+            else:
+                icon = '/static/images/mapicons/stegosaurus.png'
+        elif (taxonomy['class'] == 'Saurischia'):
+            if (taxonomy[
+                    'family'] == 'Camarasauridae' or 'Brachiosauridae' or 'Euhelopodidae' or 'Titanosauridae' or 'Mamenchisauridae' or 'Diplodocidae' or 'Massospondylidae' or 'Megaloolithidae' or 'Riojasauridae' or 'Plateosauridae' or 'Saltasauridae' or 'Faveoloolithidae' or 'Dicraeosauridae' or 'Nemegtosauridae' or 'Rebbachisauridae'):
+                icon = '/static/images/mapicons/brontosaurus.png'
+            else:
+                icon = '/static/images/mapicons/tyrannosaurus_rex.png'
         elif (taxonomy['order'] == 'Pterosauria'):
             icon = '/static/images/mapicons/pterodactyl.png'
-        elif (taxonomy['genus'] == 'Homo'):
+        elif (taxonomy['order'] == 'plesiosauridae' or 'ichthyosauridae'):
+            icon = '/static/images/mapicons/plesiosaur.png'
+        elif (taxonomy['family'] == 'Hominidae'):
             icon = '/static/images/mapicons/cartoon_caveman.ico'
         else:
             icon = '/static/images/mapicons/townspeople-dinosaur-icon.png'
