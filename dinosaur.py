@@ -41,55 +41,6 @@ google_maps_api_key = open('static/secret/google_maps_api_key.txt').read()
 GoogleMaps(app, key=google_maps_api_key)
 
 
-def connect_db():
-    """Connects to the specific database."""
-    rv = sqlite3.connect(app.config['DATABASE'])
-    rv.row_factory = sqlite3.Row
-    return rv
-
-
-def init_db():
-    """Initializes the database."""
-    db = get_db()
-    with app.open_resource('schema.sql', mode='r') as f:
-        db.cursor().executescript(f.read())
-    db.commit()
-
-
-@app.cli.command('initdb')
-def initdb_command():
-    """Creates the database tables."""
-    init_db()
-    print('Initialized the database.')
-
-
-def get_db():
-    """Opens a new database connection if there is none yet for the
-    current application context.
-    """
-    if not hasattr(g, 'sqlite_db'):
-        g.sqlite_db = connect_db()
-    return g.sqlite_db
-
-def query_db(query, args=(), one=False):
-    cur = get_db().execute(query, args)
-    rv = cur.fetchall()
-    cur.close()
-    return (rv[0] if rv else None) if one else rv
-
-@app.teardown_appcontext
-def close_db(error):
-    """Closes the database again at the end of the request."""
-    if hasattr(g, 'sqlite_db'):
-        g.sqlite_db.close()
-
-# TODO CUT THIS ONCE SQLALCHEMY IS WORKING
-def add_fossildata_to_db(lat,long,taxonName,trank_phylum,trank_class,trank_order,trank_family,trank_genus,nation,state,county,geologicAge,paleoenv,max_ma,min_ma,geocomments):
-    db = get_db()
-    data = [lat,long,taxonName,trank_phylum,trank_class,trank_order,trank_family,trank_genus,nation,state,county,geologicAge,paleoenv,max_ma,min_ma,geocomments]
-    db.execute('insert into fossils (lat, long, taxonName, trank_phylum, trank_class, trank_order, trank_family, trank_genus, nation, state, county, geologicAge, paleoenv, max_ma, min_ma, geocomments) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', data)
-    db.commit()
-
 # TODO This function erases the ENTIRE set of SQLAFossils. You should also have functions to delete a specified subset of records.
 def clear_db():
     # db = get_db()
@@ -142,39 +93,26 @@ def getName():
     name = request.args.get('getname')
     return render_template('home.html', name=name, searchresults=None)
 
-def paleoSearch(paleobiodbURL,searchRadius):
+def paleoSearch(paleobiodbURL):
     clear_db() # Cleans out old search results so that the new search begins on a fresh slate
     paleobiodbResponse = urllib.request.urlopen(paleobiodbURL)
     paleobiodbResponseJSONString = paleobiodbResponse.read().decode('UTF-8')
     paleobiodbResponseJson = json.loads(paleobiodbResponseJSONString)
-    if ('warnings' in paleobiodbResponseJson):
+    if ('warnings' in paleobiodbResponseJson): # Catches problems like typos in dinosaur names, i.e. "tircratops"
         warning = paleobiodbResponseJson['warnings'][0]
         print(warning)
-        # TODO Error if no exact search result match: "TypeError: 'Response' object is not subscriptable". Not sure why, this should be caught by the "warnings" flag...
-        flash(warning + ". Please try again.")
-        return redirect(url_for('start_here'))
+        ResultsFound = None
     else:
+        warning = None
         paleobiodbRecordsJson = paleobiodbResponseJson['records']
         ResultsFound = paleobiodbResponseJson['records_found']
         for taxonResult in paleobiodbRecordsJson: # For-loop to draw just the wanted data (lat, lng, etc) out of the JSON response, filtering out blanks and other unusable data. The good data is then turned into a SQL Alchemy Fossil object
             filterPaleobiodbResponseJson(taxonResult)
-            # For possible future expansion: JSON results contain more data about each fossil find than I'm using. See https://paleobiodb.org/data1.2/occs/list_doc.html
+            # For future expansion: JSON results contain more data about each fossil find than I'm using. See https://paleobiodb.org/data1.2/occs/list_doc.html
     allFossils = SQLAFossil.query.all()
-    markers = get_markers(allFossils) # This will replace latlonglist
-    # TODO Create GoogleMapQueryStatement from fossilResults; this replaces latlonglist, which is misnamed if it also has complex marker info which takes most of the effort of creating the GMQS. It should also have the zoomNumber
+    markers = get_markers(allFossils)
     # TODO Create pageTextList from fossilResults. bold/ital/color/links will be created on the html pages, so this needs to make the stuff that goes inside that. Also includes ResultsFound
-
-    if (searchRadius == None):
-        zoomNumber = 4
-    elif (searchRadius >= 6):
-        zoomNumber=6
-    elif (searchRadius >= 3):
-        zoomNumber = 7
-    elif (searchRadius == 2):
-        zoomNumber=8
-    else:
-        zoomNumber=9
-    return {'zoomNumber': zoomNumber, 'ResultsFound': ResultsFound, 'markers': markers, 'allFossils': allFossils}
+    return {'ResultsFound': ResultsFound, 'markers': markers, 'allFossils': allFossils, 'warning': warning}
 
 def filterPaleobiodbResponseJson(taxonResult): # TODO This needs to return data to plug back into Fossil object
     lat = float(taxonResult['lat'])
@@ -242,7 +180,7 @@ def create_fossil_objects(lat,lng,taxonName,trank_phylum,trank_class,trank_order
     coordinatePairs = [lat, lng]  # lat/long
     fossilName = getfossilName(taxonName, trank_phylum, trank_class, trank_order, trank_family,trank_genus)  # This is the fossil's display name
     taxonomy = getTaxonomy(trank_phylum, trank_class, trank_order, trank_family,trank_genus)  # This is the fossil's tree-of-life designations, to be used in behind-the-scenes filtering
-    location = getLocation(nation, state, county)
+    location = getLocation(nation, state, county, geocomments)
     age = getGeologicAge(geologicAge, max_ma, min_ma)
     # TODO Split the constructor for the mapflag and for the page text into separate submethods
     # print("FOSSILNAME: " + str(fossilName))
@@ -270,39 +208,46 @@ def getNationFromISO3166(nation):
     else:
         thisIsTheNation = pycountry.countries.get(alpha2=nation)
         nation = thisIsTheNation.name
+        print (nation)
     return nation
 
-def getLocation(nation,state,county):
-    if (nation == 'Great Britain'):
-        if (state == None):
-            location = 'Great Britain'
-        elif (state == 'England' or 'Scotland' or 'Wales' or 'Northern Ireland'):
+def getLocation(nation,state,county,geocomments):
+    if (nation == None) and (state == None) and (county == None):
+        if (geocomments != None):
+            location = geocomments
+        else:
+            location = "Location undisclosed"
+    else:
+        if (nation == 'Great Britain'):
+            if (state == None):
+                location = 'Great Britain'
+            elif (state == 'England' or 'Scotland' or 'Wales' or 'Northern Ireland'):
+                if (county == None):
+                    location = state
+                else:
+                    location = (county + ", " + state)
+            else:
+                if (county == None):
+                    location = (state + ", " + nation)
+                else:
+                    location = (county + ", " + state + ", " + nation)
+        elif (nation == 'United States'):
             if (county == None):
                 location = state
             else:
                 location = (county + ", " + state)
+        elif (nation == None):
+            if (state != None):
+                if (county == None):
+                    location = state
+                else:
+                    location = county + ", " + state
+        elif (state == None):
+            location = nation
+        elif (county == None):
+            location = (state + ", " + nation)
         else:
-            if (county == None):
-                location = (state + ", " + nation)
-            else:
-                location = (county + ", " + state + ", " + nation)
-    elif (nation == 'United States'):
-        if (county == None):
-            location = state
-        else:
-            location = (county + ", " + state)
-    elif (nation == None):
-        if (state != None):
-            if (county == None):
-                location = state
-            else:
-                location = county + ", " + state
-    elif (state == None):
-        location = nation
-    elif (county == None):
-        location = (state + ", " + nation)
-    else:
-        location = (county + ", " + state + ", " + nation)
+            location = (county + ", " + state + ", " + nation)
     return location
 
 def getfossilName(taxonName,trank_phylum,trank_class,trank_order,trank_family,trank_genus):
@@ -363,8 +308,14 @@ def get_markers(allFossils):
         # print("CAPTION: " + mapflagCaption)
         coords_and_mapFlag = [coordinatePairs[0],coordinatePairs[1],mapflagCaption]
         # create map icon based on what the search result is - this could become complex, maybe separate out as its own method
+        print ("PHYLUM: " + str(taxonomy['phylum']) + ", CLASS: " + str(taxonomy['class']) + ", ORDER: " + str(taxonomy['order']) + ", FAMILY: " + str(taxonomy['family']) + ", GENUS: " + str(taxonomy['genus']))
         if (taxonomy['class'] == 'Trilobita'):
             icon = '/static/images/mapicons/trilobite.png'
+        elif (taxonomy['class'] == 'Saurischia'):
+            if (taxonomy['family'] == 'Camarasauridae' or taxonomy['family'] == 'Brachiosauridae' or taxonomy['family'] == 'Euhelopodidae' or taxonomy['family'] == 'Titanosauridae' or taxonomy['family'] == 'Mamenchisauridae' or taxonomy['family'] == 'Diplodocidae' or taxonomy['family'] == 'Massospondylidae' or taxonomy['family'] == 'Megaloolithidae' or taxonomy['family'] == 'Riojasauridae' or taxonomy['family'] == 'Plateosauridae' or taxonomy['family'] == 'Saltasauridae' or taxonomy['family'] == 'Faveoloolithidae' or taxonomy['family'] == 'Dicraeosauridae' or taxonomy['family'] == 'Nemegtosauridae' or taxonomy['family'] == 'Rebbachisauridae'):
+                icon = '/static/images/mapicons/brontosaurus.png'
+            else:
+                icon = '/static/images/mapicons/tyrannosaurus_rex.png'
         elif (taxonomy['class'] == 'Ornithischia'):
             if (taxonomy['order'] == 'Thyreophora'):
                 icon = '/static/images/mapicons/stegosaurus.png'
@@ -372,15 +323,9 @@ def get_markers(allFossils):
                 icon = '/static/images/mapicons/triceratops.png'
             else:
                 icon = '/static/images/mapicons/stegosaurus.png'
-        elif (taxonomy['class'] == 'Saurischia'):
-            if (taxonomy[
-                    'family'] == 'Camarasauridae' or 'Brachiosauridae' or 'Euhelopodidae' or 'Titanosauridae' or 'Mamenchisauridae' or 'Diplodocidae' or 'Massospondylidae' or 'Megaloolithidae' or 'Riojasauridae' or 'Plateosauridae' or 'Saltasauridae' or 'Faveoloolithidae' or 'Dicraeosauridae' or 'Nemegtosauridae' or 'Rebbachisauridae'):
-                icon = '/static/images/mapicons/brontosaurus.png'
-            else:
-                icon = '/static/images/mapicons/tyrannosaurus_rex.png'
         elif (taxonomy['order'] == 'Pterosauria'):
             icon = '/static/images/mapicons/pterodactyl.png'
-        elif (taxonomy['order'] == 'plesiosauridae' or 'ichthyosauridae'):
+        elif (taxonomy['order'] == 'plesiosauridae' or taxonomy['order'] == 'ichthyosauridae'):
             icon = '/static/images/mapicons/plesiosaur.png'
         elif (taxonomy['family'] == 'Hominidae'):
             icon = '/static/images/mapicons/cartoon_caveman.ico'
@@ -394,45 +339,43 @@ def get_markers(allFossils):
     return markers
 
 @app.route('/fossilsearch')
-def fossilsearch(): # TODO would it be better to have "chordata" as the DEFAULT setting, and that way the user doesn't get a bunch of boring plants and insects all the time?
-    # TODO You'll need a complex captionConstructor to direct to useful wikipedia links. Also, your layout should ideally include the Wiki page within your own document, and not send user away elsewhere.
-    # TODO: Create a set of preselected searches for popular dinos/beasts, with small icons to click on.
-    if (request.args.get('taxonquery') or request.args.get('taxonradio')):
-        if (request.args.get('taxonquery')): # Typing something in the search box overrides the radiobuttons
-            searchTaxon = request.args.get('taxonquery')
-        else:
-            taxonRadioResult = request.args.get('taxonradio')
-            searchTaxon = getTaxonRadioSearchString(taxonRadioResult)
-    else:
-        searchTaxon = None
-    if (request.args.get('locationquery')):
-        searchLocation = str(request.args.get('locationquery'))
-        searchRadius = float(request.args.get('degrees'))
-        latlngradiusString = getLatLongAndRadiusString(searchLocation, searchRadius)['latlngradiusString']
-    else:
-        searchLocation = None
-        searchRadius = None
-        latlngradiusString = ""
+def fossilsearch():
+    # This downloads the JSON data for a search on PaleoBioDB. "taxon_name" returns just that taxon, while "base_name" returns taxon + all subtaxa (genus/species names). Search multiple taxa with comma separator. Wildcards include %: "Stegosaur%" pulls up both Stegosaurus and Stegosauridae. https://paleobiodb.org/data1.2/general/taxon_names_doc.htm
+    searchTaxon = getSearchTaxon(request.args.get('taxonquery'), request.args.get('taxonradio'))
     baseNameString = getbaseNameString(searchTaxon)
+    searchLocation = request.args.get('locationquery')
+    # if (request.args.get('degrees') == None):
+    #     searchRadius = 1
+    # else:
+    #     searchRadius = int(request.args.get('degrees'))
+    searchRadius = int(request.args.get('degrees'))
+    print ('searchLocation =' + str(searchLocation))
+    latlngradiusString = getLatLongAndRadiusString(searchLocation,searchRadius)['latlngradiusString']
     paleobiodbURL = 'https://paleobiodb.org/data1.2/occs/list.json?rowcount&level=3%s%s&show=full' % (baseNameString,latlngradiusString)
     print (paleobiodbURL)
-    zoomNumber = paleoSearch(paleobiodbURL, searchRadius)['zoomNumber']
-    ResultsFound = paleoSearch(paleobiodbURL, searchRadius)['ResultsFound']
-    markers = paleoSearch(paleobiodbURL, searchRadius)['markers']
-    allFossils = paleoSearch(paleobiodbURL, searchRadius)['allFossils']
-    if (searchLocation == None):
-        # Making centerpoint for taxonsearch map
-        # firstFossil = fossilResults[0]
-        firstFossil = SQLAFossil.query.first()
-        firstFossilCoordinatePairs = firstFossil.coordinatePairs
-        centerLat = firstFossilCoordinatePairs[0] # Map centers on the first result TODO it would be better if the mapcenter averaged all coordinates and chose the middle, and adjusted zoom as necessary
-        centerLng = firstFossilCoordinatePairs[1]
+    warning = paleoSearch(paleobiodbURL)['warning']
+    if (warning != None):
+        flash(warning + ". Please try again.")
+        return redirect(url_for('start_here'))
     else:
-        centerLat = getLatLongAndRadiusString(searchLocation, searchRadius)['centerLat']
-        centerLng = getLatLongAndRadiusString(searchLocation, searchRadius)['centerLng']
-        searchCenter = {'icon': '/static/images/mapicons/my_house.png', 'lat': centerLat, 'lng': centerLng, 'infobox': "Your chosen <b style='color:#00cc00;'> centerpoint </b>!" "<h2>It is HTML title</h2>" "<img src='/static/images/mapicons/tardis_by_pirate_elf.gif'>""<br><a href=https://en.wikipedia.org/wiki/Main_Page target='_blank'>Images allowed!</a>"}
-        markers.append(searchCenter)
-    return render_template('map.html', centerLat=centerLat, centerLng=centerLng, searchTerm=searchTaxon, zoomNumber=zoomNumber, markers=markers, ResultsFound=ResultsFound, allFossils=allFossils)
+        ResultsFound = paleoSearch(paleobiodbURL)['ResultsFound']
+        markers = paleoSearch(paleobiodbURL)['markers']
+        allFossils = paleoSearch(paleobiodbURL)['allFossils']
+        centerLat = getCenterMapMarker(searchLocation,searchRadius)['centerLat']
+        centerLng = getCenterMapMarker(searchLocation,searchRadius)['centerLng']
+        markers.append(getCenterMapMarker(searchLocation,searchRadius)['searchCenter'])
+        zoomNumber = getZoomNumber(searchLocation, searchRadius)
+        return render_template('map.html', centerLat=centerLat, centerLng=centerLng, searchTerm=searchTaxon, zoomNumber=zoomNumber, markers=markers, ResultsFound=ResultsFound, allFossils=allFossils)
+
+def getSearchTaxon(taxonquery, taxonradio):
+    if (taxonquery or taxonradio):
+        if (taxonquery):  # Typing something in the search box overrides the radiobuttons
+            searchTaxon = taxonquery
+        else:
+            searchTaxon = getTaxonRadioSearchString(taxonradio)
+    else:
+        searchTaxon = None
+    return searchTaxon
 
 def getTaxonRadioSearchString(taxonRadioResult):
     if taxonRadioResult == 'chordates':
@@ -465,10 +408,10 @@ def getTaxonRadioSearchString(taxonRadioResult):
         return "Hominidae"
     elif taxonRadioResult == 'trilobites':
         return "Trilobita"
+    else:
+        return None
 
 def getbaseNameString(searchTaxon):
-    # This downloads the JSON data for a species search from PaleoBioDB. "taxon_name" returns just that taxon, while "base_name" returns taxon + all subtaxa (genus/species names). Search multiple taxa with comma separator. Wildcards include %: "Stegosaur%" pulls up both Stegosaurus and Stegosauridae. https://paleobiodb.org/data1.2/general/taxon_names_doc.htm
-    # Search paleobiodb for specific species
     if (searchTaxon == None):
         return ""
     else:
@@ -476,12 +419,10 @@ def getbaseNameString(searchTaxon):
         return baseNameString
 
 def getLatLongAndRadiusString(searchLocation,searchRadius):
-    if (searchLocation == None):
-        return ""
+    if (searchLocation == ""):
+        return {'latlngradiusString': "", 'centerLat': 0, 'centerLng': 0}
     else:
         # Geocoding an address into lat/long: https://developers.google.com/maps/documentation/javascript/geocoding (For Android, here: https://developer.android.com/training/building-location.html) A more user-friendly Python plugin is here https://pypi.python.org/pypi/geocoder
-        searchLocation = str(request.args.get('locationquery'))
-        searchRadius = float(request.args.get('degrees'))
         g = geocoder.google(searchLocation)
         gLatJson = g.json['lat']
         gLngJson = g.json['lng']
@@ -490,17 +431,43 @@ def getLatLongAndRadiusString(searchLocation,searchRadius):
         lngmin = gLngJson - (searchRadius/2)
         lngmax = gLngJson + (searchRadius/2)
         latlngradiusString = '&lngmin=%s&lngmax=%s&latmin=%s&latmax=%s' % (lngmin,lngmax,latmin,latmax)
-        # TODO How to deal with multiple results for the same latlong? The map icons will cover up most of the results. Easiest: create fuller text w/ links in the ResultsFound list that goes under the map.
+        print (gLatJson)
+        print (gLngJson)
+        print (latlngradiusString)
         return {'latlngradiusString': latlngradiusString, 'centerLat': gLatJson, 'centerLng': gLngJson}
 
-# TODO Implement Wikipedia segment once SQLAlchemy/ORM is fully incorporated
-# def getWikipedia(searchQuery):
-#     # Info here: https://www.mediawiki.org/wiki/API:Main_page
-#     # wikilinkJson = https://en.wikipedia.org/w/api.php?action=query&titles=Main%20Page&prop=revisions&rvprop=content&format=json
-#     # wikilinkJsonFM = https://en.wikipedia.org/w/api.php?action=query&titles=Main%20Page&prop=revisions&rvprop=content&format=jsonfm
-#     wikilinkJson = 'https://en.wikipedia.org/w/api.php?action=query&titles=%s&prop=revisions&rvprop=content&format=json' % (searchQuery)
-#     wikipediaWhatever = "SUCCESS!"
-#     return wikipediaWhatever
+
+def getCenterMapMarker(searchLocation,searchRadius):
+    if (searchLocation == ""):
+        # Making centerpoint for taxonsearch map
+        # firstFossil = fossilResults[0]
+        firstFossil = SQLAFossil.query.first()
+        firstFossilCoordinatePairs = firstFossil.coordinatePairs
+        centerLat = firstFossilCoordinatePairs[0] # Map centers on the first result if no location chosen
+        centerLng = firstFossilCoordinatePairs[1]
+        searchCenter = None
+    else:
+        centerLat = getLatLongAndRadiusString(searchLocation,searchRadius)['centerLat']
+        centerLng = getLatLongAndRadiusString(searchLocation,searchRadius)['centerLng']
+        searchCenter = {'icon': '/static/images/mapicons/my_house.png', 'lat': centerLat, 'lng': centerLng, 'infobox': "Your chosen <b style='color:#00cc00;'> centerpoint </b>!" "<h2>HTML title</h2>" "<img src='/static/images/mapicons/tardis_by_pirate_elf.gif'>""<br><a href=https://en.wikipedia.org/wiki/Main_Page target='_blank'>Images and links allowed!</a>"}
+    return {'searchCenter':searchCenter, 'centerLat':centerLat, 'centerLng':centerLng}
+
+def getZoomNumber(searchLocation,searchRadius):
+    if (searchLocation == ""):
+        zoomNumber = 4
+    elif (searchRadius >= 9):
+        zoomNumber = 5
+    elif (searchRadius >= 6):
+        zoomNumber = 6
+    elif (searchRadius >= 3):
+        zoomNumber = 7
+    elif (searchRadius == 2):
+        zoomNumber=8
+    else:
+        zoomNumber=9
+    return zoomNumber
+
+
 
 @app.route('/cancel')
 def cancel():

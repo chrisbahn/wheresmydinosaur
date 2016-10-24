@@ -84,7 +84,7 @@
  <fieldset>
     City: <input type=text oninput="$('#locationquery').html('near ' + this.value)" name="locationquery"><br>
     Search radius:
-    <input type="range" name="degrees" min="1" max="8" value="1" onchange="showValue(this.value*70 + ' miles (' + this.value + ' degrees)')" />
+    <input type="range" name="degrees" min="1" max="10" value="1" onchange="showValue(this.value*70 + ' miles (' + this.value + ' degrees)')" />
     <span id="range">70 miles (1 degree)</span>
     <script type="text/javascript">
         function showValue(newValue)
