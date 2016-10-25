@@ -2,7 +2,7 @@ from flask import Flask, request, session, g, redirect, url_for, abort, render_t
 import os
 import json, requests, sys, random
 from sqlite3 import dbapi2 as sqlite3
-from wtforms import RadioField, SubmitField,IntegerField,TextAreaField
+from wtforms import RadioField, SubmitField,IntegerField,TextAreaField,SelectField
 from flask_wtf import Form
 import urllib.request
 from flask_googlemaps import GoogleMaps # https://pypi.python.org/pypi/Flask-GoogleMaps/
@@ -12,9 +12,6 @@ import pycountry # https://pypi.python.org/pypi/pycountry
 from flask_sqlalchemy import SQLAlchemy
 
 # import pywikibot # https://www.mediawiki.org/wiki/Manual:Pywikibot/Installation
-
-# ORM - object relational mapping
-# SQl Alchemy
 
 app = Flask(__name__)
 
@@ -81,17 +78,10 @@ class SQLAFossil(db.Model):
         self.geocomments = geocomments
 
 
+
 @app.route('/')
 def start_here():
-    name = "Zoe and Beatrice" # TODO Placeholder so I don't have to enter a name each time I restart the page
-    if (name == None):
-        getName()
-    return render_template('home.html', name=name, searchresults=None)
-
-@app.route('/getname')
-def getName():
-    name = request.args.get('getname')
-    return render_template('home.html', name=name, searchresults=None)
+    return render_template('home.html', searchresults=None)
 
 def paleoSearch(paleobiodbURL):
     clear_db() # Cleans out old search results so that the new search begins on a fresh slate
@@ -114,7 +104,7 @@ def paleoSearch(paleobiodbURL):
     # TODO Create pageTextList from fossilResults. bold/ital/color/links will be created on the html pages, so this needs to make the stuff that goes inside that. Also includes ResultsFound
     return {'ResultsFound': ResultsFound, 'markers': markers, 'allFossils': allFossils, 'warning': warning}
 
-def filterPaleobiodbResponseJson(taxonResult): # TODO This needs to return data to plug back into Fossil object
+def filterPaleobiodbResponseJson(taxonResult):
     lat = float(taxonResult['lat'])
     lng = float(taxonResult['lng'])
     if ('tna' in taxonResult):
@@ -182,7 +172,6 @@ def create_fossil_objects(lat,lng,taxonName,trank_phylum,trank_class,trank_order
     taxonomy = getTaxonomy(trank_phylum, trank_class, trank_order, trank_family,trank_genus)  # This is the fossil's tree-of-life designations, to be used in behind-the-scenes filtering
     location = getLocation(nation, state, county, geocomments)
     age = getGeologicAge(geologicAge, max_ma, min_ma)
-    # TODO Split the constructor for the mapflag and for the page text into separate submethods
     # print("FOSSILNAME: " + str(fossilName))
     # print("LOCATION: " + location)
     # print("GEOLOGICAGE: " + age)
@@ -193,7 +182,6 @@ def create_fossil_objects(lat,lng,taxonName,trank_phylum,trank_class,trank_order
     db.session.commit()
     return newFossil # DO I NEED TO RETURN ANYTHING?
 
-# How data flows in this program: A structured query to paleoBioDB gets back JSON data, which is then filtered into SQL ALchemy Fossil objects, which are then used to create Google Maps markers and basic display info on what the fossil is. NOTE: The set of Fossil objects is erased before each new search, in order to make it easier to handle the information. However, you could do more with your data set if you cached older searches and created a growing database. You'd need to write a method to ensure that a new JSON search would only create new Fossil objects if they didn't duplicate ones already in the system, but still display the full results of a search.
 
 
 def getNationFromISO3166(nation):
