@@ -38,17 +38,7 @@ google_maps_api_key = open('static/secret/google_maps_api_key.txt').read()
 GoogleMaps(app, key=google_maps_api_key)
 
 
-# TODO This function erases the ENTIRE set of SQLAFossils. You should also have functions to delete a specified subset of records.
-def clear_db():
-    # db = get_db()
-    # db.execute('DELETE FROM fossils')
-    # db.commit()
-    allFossils = SQLAFossil.query.all()
-    for Fossil in allFossils:
-        db.session.delete(Fossil)
-        db.session.commit()
-
-class SQLAFossil(db.Model):
+class Fossil(db.Model):
     # TODO These assume you have distilled the 16 JSON variables into the 7 main variables. BUT: there might be value in ALSO keeping the 16 variables on hand here. "Age" is a string, and you could do more with its three components if you retained them as separate elements. OTOH, you could maybe store "age" as a PickleType, and have a submethod that creates the "age" string... Same with "location": The separate elements could conceivably be useful, for instance you could pull all finds where state=Minnesota.
     id = db.Column(db.Integer, primary_key=True)
     # The following variables are created by manipulating or consolidating two or more of the JSON variables AND ARE currently used to create maps
@@ -77,6 +67,56 @@ class SQLAFossil(db.Model):
         self.paleoenv = paleoenv
         self.geocomments = geocomments
 
+class GeoTime(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    interval_no = db.Column(db.Integer)
+    scale_level = db.Column(db.Integer)
+    interval_name = db.Column(db.String(30))
+    color = db.Column(db.String(7))
+    max_ma = db.Column(db.Float)
+    min_ma = db.Column(db.Float)
+    parent_no = db.Column(db.Integer)
+
+    def __init__(self, interval_no, scale_level, interval_name, color, max_ma, min_ma, parent_no):
+        self.interval_no = interval_no
+        self.scale_level = scale_level
+        self.interval_name = interval_name
+        self.color = color
+        self.max_ma = max_ma
+        self.min_ma = min_ma
+        self.parent_no = parent_no
+
+
+def create_GeoTime_objects():
+    paleobiodbResponse = urllib.request.urlopen('https://paleobiodb.org/data1.2/intervals/list.json?scale=1')
+    paleobiodbResponseJSONString = paleobiodbResponse.read().decode('UTF-8')
+    paleobiodbResponseJson = json.loads(paleobiodbResponseJSONString)
+    paleobiodbRecordsJson = paleobiodbResponseJson['records']
+    for line in paleobiodbRecordsJson:
+        interval_no = int(str(line['oid']).strip('int:'))
+        scale_level = int(line['lvl'])
+        if ('nam' in line):
+            interval_name = str(line['nam'])
+        elif ('oei' in line):
+            interval_name = str(line['oei'])
+        color = str(line['col'])
+        max_ma = float(line['eag'])
+        min_ma = float(line['lag'])
+        if ('pid' in line):
+            parent_no = int(str(line['pid']).strip('int:'))
+        newGeoTime = GeoTime(interval_no, scale_level, interval_name, color, max_ma, min_ma, parent_no)
+        db.session.add(newGeoTime)
+        db.session.commit()
+        print(interval_name + " " + str(interval_no) + " " + str(parent_no))
+
+
+
+def clear_db():
+    allFossils = Fossil.query.all()
+    for fossilInstance in allFossils:
+        db.session.delete(fossilInstance)
+        db.session.commit()
+
 
 
 @app.route('/')
@@ -88,7 +128,7 @@ def start_here():
         ('chkTheropods', 'theropods', 'Theropods (Tyrannosaurus, etc.)',2),
         ('chkStegosaurs', 'stegosaurs', 'Stegosaurs',2),
         ('chkAnkylosaurs', 'ankylosaurs', 'Ankylosaurs',2),
-        ('chkHadrosaurs', 'hadrosaurs', 'Hadrosaurs (duckbills)',2),
+        ('chkOrnithopods', 'ornithopods', 'Ornithopods (duckbills and iguanodonts)',2),
         ('chkCeratopsians', 'ceratopsians', 'Ceratopsians (Triceratops, etc.)',2),
         ('chkPlesioichthyosauria', 'plesioichthyosauria', 'Plesiosaurs and ichthyosaurs',1),
         ('chkPterosauria', 'pterosauria', 'Pterosaurs',1),
@@ -98,7 +138,10 @@ def start_here():
         ('chkTrilobites', 'trilobites', 'Trilobites',0),
         ('chkChordates', 'chordates', 'All chordates (animals with backbones)',0),
         ]
-    return render_template('home.html', searchresults=None, taxonRadioButtonList=taxonRadioButtonList)
+    allGeoTimes = GeoTime.query.all()
+    return render_template('home.html', searchresults=None, taxonRadioButtonList=taxonRadioButtonList,allGeoTimes=allGeoTimes)
+
+
 
 def paleoSearch(paleobiodbURL):
     clear_db() # Cleans out old search results so that the new search begins on a fresh slate
@@ -116,7 +159,7 @@ def paleoSearch(paleobiodbURL):
         for taxonResult in paleobiodbRecordsJson: # For-loop to draw just the wanted data (lat, lng, etc) out of the JSON response, filtering out blanks and other unusable data. The good data is then turned into a SQL Alchemy Fossil object
             filterPaleobiodbResponseJson(taxonResult)
             # For future expansion: JSON results contain more data about each fossil find than I'm using. See https://paleobiodb.org/data1.2/occs/list_doc.html
-    allFossils = SQLAFossil.query.all()
+    allFossils = Fossil.query.all()
     markers = get_markers(allFossils)
     # TODO Create pageTextList from fossilResults. bold/ital/color/links will be created on the html pages, so this needs to make the stuff that goes inside that. Also includes ResultsFound
     return {'ResultsFound': ResultsFound, 'markers': markers, 'allFossils': allFossils, 'warning': warning}
@@ -180,24 +223,18 @@ def filterPaleobiodbResponseJson(taxonResult):
         geocomments = str(taxonResult['ggc'])
     else:
         geocomments = None
-    create_fossil_objects(lat, lng, taxonName, trank_phylum, trank_class, trank_order, trank_family, trank_genus, nation, state, county, geologicAge, paleoenv, max_ma, min_ma, geocomments)  # Creates a SQLAFossil object
+    create_fossil_objects(lat, lng, taxonName, trank_phylum, trank_class, trank_order, trank_family, trank_genus, nation, state, county, geologicAge, paleoenv, max_ma, min_ma, geocomments)  # Creates a Fossil object
 
 def create_fossil_objects(lat,lng,taxonName,trank_phylum,trank_class,trank_order,trank_family,trank_genus,nation,state,county,geologicAge,paleoenv,max_ma,min_ma,geocomments):
-    # This takes the raw JSON variables from paleobiodbRecordsJson, created in paleoSearch(), and creates a set of SQLAFossil objects for mapping, etc.
+    # This takes the raw JSON variables from paleobiodbRecordsJson, created in paleoSearch(), and creates a set of Fossil objects for mapping, etc.
     coordinatePairs = [lat, lng]  # lat/long
     fossilName = getfossilName(taxonName, trank_phylum, trank_class, trank_order, trank_family,trank_genus)  # This is the fossil's display name
     taxonomy = getTaxonomy(trank_phylum, trank_class, trank_order, trank_family,trank_genus)  # This is the fossil's tree-of-life designations, to be used in behind-the-scenes filtering
     location = getLocation(nation, state, county, geocomments)
     age = getGeologicAge(geologicAge, max_ma, min_ma)
-    # print("FOSSILNAME: " + str(fossilName))
-    # print("LOCATION: " + location)
-    # print("GEOLOGICAGE: " + age)
-    # print("PALEOENVIRONMENT: " + str(paleoenv))
-    # print("GEOCOMMENTS: " + str(geocomments))
-    newFossil = SQLAFossil(fossilName, taxonomy, location, age, coordinatePairs, paleoenv, geocomments)
+    newFossil = Fossil(fossilName, taxonomy, location, age, coordinatePairs, paleoenv, geocomments)
     db.session.add(newFossil)
     db.session.commit()
-    return newFossil # DO I NEED TO RETURN ANYTHING?
 
 
 
@@ -280,24 +317,38 @@ def getTaxonomy(trank_phylum, trank_class, trank_order, trank_family, trank_genu
     return taxonomy
 
 def getGeologicAge(geologicAge,max_ma,min_ma):
+    eras = GeoTime.query.filter_by(scale_level=2)
+    periods = GeoTime.query.filter_by(scale_level=3)
+    age = ""
+    firstpart = ""
+    years = ""
     if (geologicAge == None):
         age = "Geologic age unknown"
     else:
-        if (max_ma < 1):
-            if (min_ma != None):
-                age = geologicAge + " (approx. " + str(round(((max_ma+min_ma)/2)*1000,2)) + " thousand years ago)"
-            elif (min_ma == None):
-                age = geologicAge + " (approx. " + str(max_ma*1000) + " thousand years ago)"
-        elif (max_ma >= 1):
-            if (min_ma != None):
-                    age = geologicAge + " (approx. " + str(round((max_ma+min_ma)/2,2)) + " million years ago)"
-            elif (min_ma == None):
-                age = geologicAge + " (approx. " + str(max_ma) + " million years ago)"
-        else:
-            age = geologicAge
-        # TODO Import this list https://paleobiodb.org/data1.2/intervals/list.txt?scale=1 as a second table and use it to match the max_ma/min_ma numbers to a scale_level 2/3/4 string.
+        for period in periods:
+            for era in eras:
+                if (era.interval_no == period.parent_no):
+                    if ((min_ma != None) and (period.max_ma >= ((max_ma + min_ma) / 2) >= period.min_ma)) or ((min_ma == None) and (period.max_ma >= max_ma >= period.min_ma)):
+                        firstpart = period.interval_name + " " + getTimeScaleDivisionName(period) + ", " + era.interval_name + " " + getTimeScaleDivisionName(era)
+            if (max_ma < 1):
+                if (min_ma != None):
+                    years = " (approx. " + str(round(((max_ma+min_ma)/2)*1000,2)) + " thousand years ago)"
+                elif (min_ma == None):
+                    years = " (approx. " + str(max_ma*1000) + " thousand years ago)"
+            elif (max_ma >= 1):
+                if (min_ma != None):
+                    years = " (approx. " + str(round((max_ma+min_ma)/2,2)) + " million years ago)"
+                elif (min_ma == None):
+                    years = " (approx. " + str(max_ma) + " million years ago)"
+                else:
+                    years = ""
+            age = firstpart + years
     return age
 
+def getTimeScaleDivisionName(GeoTime):
+    TimeScaleDivisionDict = {1: "eon", 2: "era", 3: "period", 4: "epoch", 5: "age"}
+    TimeScaleDivisionName = TimeScaleDivisionDict[GeoTime.scale_level]
+    return TimeScaleDivisionName
 
 def get_markers(allFossils):
     coords_and_mapFlag_List = []
@@ -312,6 +363,8 @@ def get_markers(allFossils):
         mapflagCaption = "<b style='color:red;'>" + fossilName + "</b>. " + location + ". " + age + "."
         # print("CAPTION: " + mapflagCaption)
         coords_and_mapFlag = [coordinatePairs[0],coordinatePairs[1],mapflagCaption]
+        print("coordinatePairs: " + str(coordinatePairs[0]) + ", " + str(coordinatePairs[1]))
+
         # create map icon based on what the search result is - this could become complex, maybe separate out as its own method
         print ("PHYLUM: " + str(taxonomy['phylum']) + ", CLASS: " + str(taxonomy['class']) + ", ORDER: " + str(taxonomy['order']) + ", FAMILY: " + str(taxonomy['family']) + ", GENUS: " + str(taxonomy['genus']))
         if (taxonomy['class'] == 'Trilobita'):
@@ -397,8 +450,8 @@ def getTaxonRadioSearchString(taxonRadioResult):
         return "Stegosauria"
     elif taxonRadioResult == 'ankylosaurs':
         return "ankylosauria"
-    elif taxonRadioResult == 'hadrosaurs':
-        return "hadrosauria"
+    elif taxonRadioResult == 'ornithopoda':
+        return "ornithopoda"
     elif taxonRadioResult == 'ceratopsians':
         return "ceratopsia"
     elif taxonRadioResult == 'plesioichthyosauria':
@@ -446,7 +499,7 @@ def getCenterMapMarker(searchLocation,searchRadius):
     if (searchLocation == ""):
         # Making centerpoint for taxonsearch map
         # firstFossil = fossilResults[0]
-        firstFossil = SQLAFossil.query.first()
+        firstFossil = Fossil.query.first()
         firstFossilCoordinatePairs = firstFossil.coordinatePairs
         centerLat = firstFossilCoordinatePairs[0] # Map centers on the first result if no location chosen
         centerLng = firstFossilCoordinatePairs[1]
@@ -481,5 +534,10 @@ def cancel():
     return redirect(url_for('start_here'))
 
 if __name__ == '__main__':
-    # db.create_all()
+    db.create_all()
+    allGeoTimes = GeoTime.query.all()
+    for line in allGeoTimes:
+        db.session.delete(line)
+        db.session.commit()
+    create_GeoTime_objects()
     app.run()

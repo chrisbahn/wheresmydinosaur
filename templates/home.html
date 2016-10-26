@@ -14,12 +14,9 @@
     <input type="submit" value="SEARCH"></input> <input type="reset" value="CLEAR SEARCH FIELDS">
 <div class="innerflexbox">
 <div class="innerflex3">
-    <B>Look for these fossils</B>...<br>
+    <B>Look for these fossils</B>...<br><br>
       {% for item in taxonRadioButtonList %}
-            {% for x in range(0, item[3]) %}
-                   &nbsp;&nbsp;&nbsp;
-        {% endfor %}
-
+            {% for x in range(0, item[3]) %}&nbsp;&nbsp;&nbsp;{% endfor %}
         <label for="{{ item[0] }}"><input type='radio' name='taxonradio' id="{{ item[0] }}" value="{{ item[1] }}" onclick="$('#taxonquery').html('{{ item[2] }}')"> {{ item[2] }}</label><br>
         {% endfor %}
      <br>
@@ -50,5 +47,12 @@
 
 
 </div>
+<B>Geologic ages of the Earth:</B>
+          {% for line in allGeoTimes %}
+          {% if line.scale_level < 6 %}
+       <div style='background:{{ line.color }};'>      {% for x in range(0, line.scale_level) %}&nbsp;&nbsp;&nbsp;{% endfor %}
+              &#0149; <b>{{ line.interval_name }}</b> ({{ line.scale_level }}): {{ line.max_ma }} to {{ line.min_ma }} million years ago<br></div>
+        {% endif %}
+        {% endfor %}
 
 {% endblock %}
