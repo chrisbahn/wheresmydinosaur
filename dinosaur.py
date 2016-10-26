@@ -81,7 +81,24 @@ class SQLAFossil(db.Model):
 
 @app.route('/')
 def start_here():
-    return render_template('home.html', searchresults=None)
+    taxonRadioButtonList = [
+        ('chkDinosAndFriends', 'dinosaursandfriends', 'Dinosaurs and their close relatives',0),
+        ('chkDinos', 'dinosaurs', 'All dinosaurs',1),
+        ('chkSauropods', 'sauropods', 'Sauropods (Brachiosaurus, etc.)',2),
+        ('chkTheropods', 'theropods', 'Theropods (Tyrannosaurus, etc.)',2),
+        ('chkStegosaurs', 'stegosaurs', 'Stegosaurs',2),
+        ('chkAnkylosaurs', 'ankylosaurs', 'Ankylosaurs',2),
+        ('chkHadrosaurs', 'hadrosaurs', 'Hadrosaurs (duckbills)',2),
+        ('chkCeratopsians', 'ceratopsians', 'Ceratopsians (Triceratops, etc.)',2),
+        ('chkPlesioichthyosauria', 'plesioichthyosauria', 'Plesiosaurs and ichthyosaurs',1),
+        ('chkPterosauria', 'pterosauria', 'Pterosaurs',1),
+        ('chkBirds', 'birds', 'Birds',0),
+        ('chkMammals', 'mammals', 'Mammals',0),
+        ('chkHominids', 'hominids', 'Hominids (ancient humans and their relatives)',1),
+        ('chkTrilobites', 'trilobites', 'Trilobites',0),
+        ('chkChordates', 'chordates', 'All chordates (animals with backbones)',0),
+        ]
+    return render_template('home.html', searchresults=None, taxonRadioButtonList=taxonRadioButtonList)
 
 def paleoSearch(paleobiodbURL):
     clear_db() # Cleans out old search results so that the new search begins on a fresh slate

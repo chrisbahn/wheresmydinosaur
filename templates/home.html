@@ -2,39 +2,12 @@
 {% block home %}
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
 
-    {% macro inputTaxonRadio
-        (value='', id='', displayname='') -%}
-        <label for="{{ id }}"><input type='radio' name='taxonradio' id="{{ id }}" value="{{ value|e }}" onclick="ShowHideDiv(),$('#displaySearchText').html('{{ displayname }}')"> {{ displayname }}</label>
-         <script type="text/javascript"> function ShowHideDiv() {
-             var chkRadioButton = document.getElementById("{{ id }}");
-        }</script>
-    {%- endmacro %}
-
-
-
-
     <br>
     Hello! Find out what prehistoric creatures lived near you, or anywhere else in the world you choose.
 
 <div class="component_searchbox">
-    What do you want to find?<br><br>
+    What do you want to find?<br>
     <b><span id='taxonquery'></span>
-        <span id='displaySearchText'></span>
-    <span id="JustChordates" style="display: none">chordates</span>
-    <span id="JustDinosAndFriends" style="display: none">dinosaurs and their relatives</span>
-    <span id="JustDinos" style="display: none">dinosaurs</span>
-    <span id="JustSauropods" style="display: none">sauropods</span>
-    <span id="JustTheropods" style="display: none">theropods</span>
-    <span id="JustStegosaurs" style="display: none">stegosaurs!!!</span>
-    <span id="JustAnkylosaurs" style="display: none">ankylosaurs</span>
-    <span id="JustHadrosaurs" style="display: none">hadrosaurs</span>
-    <span id="JustCeratopsians" style="display: none">ceratopsians</span>
-    <span id="JustPlesioichthyosauria" style="display: none">plesiosaurs and ichthyosaurs</span>
-    <span id="JustPterosauria" style="display: none">pterosaurs</span>
-    <span id="JustBirds" style="display: none">birds</span>
-    <span id="JustTrilobites" style="display: none">trilobites</span>
-    <span id="JustMammals" style="display: none">mammals</span>
-    <span id="JustHominids" style="display: none">hominids</span>
     <span id='locationquery'></span></b>
 <br>
     <form action="/fossilsearch">
@@ -42,39 +15,17 @@
 <div class="innerflexbox">
 <div class="innerflex3">
     <B>Look for these fossils</B>...<br>
-    <img src="static/images/charlesrknight_tyrannotrice.jpg" alt="Charles R. Knight" height="140px" align="center" border="1"><br><br>
-     Enter the name of an animal to search for. Find multiple species by separating with commas (i.e. <i>Tyrannosaurus,Triceratops</i>. Leave this blank to search for <b>all fossils</b>.<br><br>
-        <input type=text size="50" oninput="$('#taxonquery').html(this.value)" name="taxonquery"><br><br>
- <fieldset>
-    Restrict search to just these fossils:<br>
-      {% for line in shakeslines %}
-         <input type="radio" name="quotechoice" value="{{ line.line_id }}"> {{ line.speaker }}: {{ line.text_entry }} (from <i>{{ line.play_name}}</i>)<br>
-            {{ inputTaxonRadio(value='dinosaurs', id="chkJustDinos", displayname='All dinosaurs') }}<br>
+      {% for item in taxonRadioButtonList %}
+            {% for x in range(0, item[3]) %}
+                   &nbsp;&nbsp;&nbsp;
         {% endfor %}
 
-        <label for="chkJustChordates"><input type="radio" name="taxonradio" id="chkJustChordates" value="chordates" onclick="ShowHideDiv()"> Chordates (animals with backbones)</label><br>
-        <label for="chkJustDinosAndFriends"><input type="radio" name="taxonradio" id="chkJustDinosAndFriends" value="dinosaursandfriends" onclick="ShowHideDiv()"> Dinosaurs (and their close relatives)</label><br>
-             <fieldset>
-             <fieldset>
-            {{ inputTaxonRadio(value='dinosaurs', id="chkJustDinos", displayname='All dinosaurs') }}<br>
-            {{ inputTaxonRadio(value='stegosaurs', id="chkJustStegosaurs", displayname='Stegosaurs') }}<br><br>
-
-            <label for="chkJustDinos"><input type="radio" name="taxonradio" id="chkJustDinos" value="dinosaurs" onclick="ShowHideDiv()"> All dinosaurs</label><br>
-            <label for="chkJustSauropods"><input type="radio" name="taxonradio" id="chkJustSauropods" value="sauropods" onclick="ShowHideDiv()"> Sauropods(<i>Brachiosaurus</i>, etc.)</label><br>
-            <label for="chkJustTheropods"><input type="radio" name="taxonradio" id="chkJustTheropods" value="theropods" onclick="ShowHideDiv()"> Theropods (<i>Tyrannosaurus</i>, etc.)</label><br>
-            <label for="chkJustStegosaurs"><input type="radio" name="taxonradio" id="chkJustStegosaurs" value="stegosaurs" onclick="ShowHideDiv()"> Stegosaurs</label><br>
-            <label for="chkJustAnkylosaurs"><input type="radio" name="taxonradio" id="chkJustAnkylosaurs" value="ankylosaurs" onclick="ShowHideDiv()"> Ankylosaurs</label><br>
-            <label for="chkJustHadrosaurs"><input type="radio" name="taxonradio" id="chkJustHadrosaurs" value="hadrosaurs" onclick="ShowHideDiv()"> Hadrosaurs (duckbills)</label><br>
-            <label for="chkJustCeratopsians"><input type="radio" name="taxonradio" id="chkJustCeratopsians" value="ceratopsians" onclick="ShowHideDiv()"> Ceratopsians (<i>Triceratops</i>, etc.)</label><br>
-             </fieldset>
-            <label for="chkJustPlesioichthyosauria"><input type="radio" name="taxonradio" id="chkJustPlesioichthyosauria" value="plesioichthyosauria" onclick="ShowHideDiv()"> Plesiosaurs and Ichthyosaurs</label><br>
-            <label for="chkJustPterosauria"><input type="radio" name="taxonradio" id="chkJustPterosauria" value="pterosauria" onclick="ShowHideDiv()"> Pterosaurs</label><br>
-             </fieldset>
-        <label for="chkJustBirds"><input type="radio" name="taxonradio" id="chkJustBirds" value="birds" onclick="ShowHideDiv()"> Birds</label><br>
-        <label for="chkJustMammals"><input type="radio" name="taxonradio" id="chkJustMammals" value="mammals" onclick="ShowHideDiv()"> Mammals</label><br>
-        <label for="chkJustHominids"><input type="radio" name="taxonradio" id="chkJustHominids" value="hominids" onclick="ShowHideDiv()"> Hominids (ancient humans and their relatives)</label><br>
-        <label for="chkJustTrilobites"><input type="radio" name="taxonradio" id="chkJustTrilobites" value="trilobites" onclick="ShowHideDiv()"> Trilobites</label><br>
- </fieldset>
+        <label for="{{ item[0] }}"><input type='radio' name='taxonradio' id="{{ item[0] }}" value="{{ item[1] }}" onclick="$('#taxonquery').html('{{ item[2] }}')"> {{ item[2] }}</label><br>
+        {% endfor %}
+     <br>
+     Or pick something yourself! (Find multiple species by separating with commas (i.e. <i>Tyrannosaurus,Triceratops</i>):
+        <input type=text size="50" oninput="$('#taxonquery').html(this.value)" name="taxonquery"><br><br>
+ Leave all fossil fields blank to search for <b>all fossils</b>.    <img src="static/images/charlesrknight_tyrannotrice.jpg" alt="Charles R. Knight" height="140px" align="center" border="1">
  </div>
 
     <div class="innerflex3">
@@ -89,21 +40,6 @@
         { document.getElementById("range").innerHTML=newValue; }
     </script><br>
  </fieldset>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     <br><br>
     <i>(Leave this blank to search <b>worldwide</b>)</i>
