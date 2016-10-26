@@ -8,8 +8,8 @@ h2              { font-size: 1.2em; }
 .page           { margin: 2em auto; border: 5px solid #006600; padding: 0.8em; background: #ccffcc; min-width: 80%; flex-grow: 0; }
 .twittertimeline { margin: 2em auto; border: 5px solid #006600; padding: 0.8em; background: #cccccc; flex-grow: 1; }
 
-.component      { background-color: #66cc66; color: black; margin: 20px 0 20px 0; padding: 20px; border: 1px solid #000000;}
-.component_searchbox      { background-color: #66cc66; color: black; margin: 20px 0 20px 0; padding: 20px; min-height: 140px; border: 1px solid #000000;}
+.component      { background-color: #66cc66; color: black; margin: 20px 0 20px 0; padding: 10px; border: 1px solid #000000;}
+.component_searchbox      { background-color: #66cc66; color: black; margin: 2px 0 2px 0; padding: 1px; min-height: 140px; border: 1px solid #000000;}
 .component_bottomcredits      { background-color: #ffffff;
     color: black; margin: 0px 0 0px 0; height: 120px; width: 210px; padding: 1px; border: 0px solid #000000; font-size: 0.8em; width: 100%;
                             vertical-align: top; align: right; display: inline-block; text-align: center;  } img { height: 100px; align: right; border: 0px; bordercolor: "#ccffff"}
@@ -18,7 +18,7 @@ h2              { font-size: 1.2em; }
 
 .innerflexbox        { background-color: #66cc66; color: black; margin: 0px 0 0px 0; padding: 0px; border: 0px solid #000000; display: -webkit-flex; display: flex;  }
 
-.innerflex1           { margin: 1em auto; border: 1px solid #006600; padding: 0.4em; background: #66cc66; min-width: 20%; flex-grow: 1;}
+.innerflex1           { margin: 1em auto; border: 1px solid #006600; padding: 0.1em; background: #66cc66; min-width: 30%; flex-grow: 1;}
 .innerflex2           { margin: 1em auto; border: 1px solid #006600; padding: 0.4em; background: #66cc66; min-width: 15%; flex-grow: 1;}
 .innerflex3           { margin: 1em auto; border: 1px solid #006600; padding: 0.4em; background: #66cc66; min-width: 40%; flex-grow: 1;}
 .innerflex4           { margin: 1em auto; border: 1px solid #006600; padding: 0.4em; background: #66cc66; min-width: 10%; flex-grow: 1; }

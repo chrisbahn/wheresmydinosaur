@@ -4,30 +4,29 @@
 
     <br>
     Hello! Find out what prehistoric creatures lived near you, or anywhere else in the world you choose.
-
-<div class="component_searchbox">
-    What do you want to find?<br>
+<br><br>
+    What do you want to find?
     <b><span id='taxonquery'></span>
-    <span id='locationquery'></span></b>
-<br>
+    <span id='locationquery'></span>
+    <span id='geotimequery'></span></b>
     <form action="/fossilsearch">
-    <input type="submit" value="SEARCH"></input> <input type="reset" value="CLEAR SEARCH FIELDS">
+   <div class="component_searchbox"> <input type="submit" value="SEARCH"></input><input type="reset" value="CLEAR SEARCH FIELDS">
 <div class="innerflexbox">
-<div class="innerflex3">
-    <B>Look for these fossils</B>...<br><br>
+<div class="innerflex1">
+<div>    <B>Look for these fossils</B>...</div><div><br>
       {% for item in taxonRadioButtonList %}
             {% for x in range(0, item[3]) %}&nbsp;&nbsp;&nbsp;{% endfor %}
         <label for="{{ item[0] }}"><input type='radio' name='taxonradio' id="{{ item[0] }}" value="{{ item[1] }}" onclick="$('#taxonquery').html('{{ item[2] }}')"> {{ item[2] }}</label><br>
         {% endfor %}
      <br>
      Or pick something yourself! (Find multiple species by separating with commas (i.e. <i>Tyrannosaurus,Triceratops</i>):
-        <input type=text size="50" oninput="$('#taxonquery').html(this.value)" name="taxonquery"><br><br>
- Leave all fossil fields blank to search for <b>all fossils</b>.    <img src="static/images/charlesrknight_tyrannotrice.jpg" alt="Charles R. Knight" height="140px" align="center" border="1">
- </div>
+        <input type=text size="50" oninput="$('#taxonquery').html(this.value)" name="taxonquery">
+    <br><br>
+         <i>(Leave this column blank to search for <b>all fossils</b>)</i>
+ </div></div>
 
-    <div class="innerflex3">
-    ... <B>near this location</B>:<br><br>
- <fieldset>
+<div class="innerflex1">
+<div>   ... <B>near this location</B> ...<br></div><div><br>
     City: <input type=text oninput="$('#locationquery').html('near ' + this.value)" name="locationquery"><br>
     Search radius:
     <input type="range" name="degrees" min="1" max="10" value="1" onchange="showValue(this.value*70 + ' miles (' + this.value + ' degrees)')" />
@@ -36,22 +35,33 @@
         function showValue(newValue)
         { document.getElementById("range").innerHTML=newValue; }
     </script><br>
- </fieldset>
 
     <br><br>
     <i>(Leave this blank to search <b>worldwide</b>)</i>
+    </div></div>
+<div class="innerflex1">
+<div>    ... <B>from this time period</B>:<br></div><div><br>
+          {% for line in allGeoTimes %}
+          {% if ((line.scale_level < 4) and (line.scale_level > 1)) and (line.max_ma < 550)%}
+       <div style='background:{{ line.color }};'>      {% for x in range(2, line.scale_level) %}&nbsp;&nbsp;&nbsp;{% endfor %}
+        <input type='radio' name='geotimeradio' id="{{ line.interval_name }}" value="{{ line.interval_name }}" onclick="$('#geotimequery').html(' from the {{ line.interval_name }}</b> {{ getTimeScaleDivisionName(line) }} ({{ line.max_ma }}mya)')"><b>{{ line.interval_name }}</b> {{ getTimeScaleDivisionName(line) }} ({{ round(line.max_ma,1) }}-{{ round(line.min_ma,1) }}mya)<br></div>
+        {% endif %}
+        {% endfor %}
+        <br><br>
+    <i>(Leave this blank to search <b>all time periods</b>)</i>
 </div>
-</div>
+</div>            </div>
+            </div>
    </form>
 
 
 
-</div>
+
 <B>Geologic ages of the Earth:</B>
           {% for line in allGeoTimes %}
           {% if line.scale_level < 6 %}
        <div style='background:{{ line.color }};'>      {% for x in range(0, line.scale_level) %}&nbsp;&nbsp;&nbsp;{% endfor %}
-              &#0149; <b>{{ line.interval_name }}</b> ({{ line.scale_level }}): {{ line.max_ma }} to {{ line.min_ma }} million years ago<br></div>
+              &#0149; <b>{{ line.interval_name }}</b> {{ getTimeScaleDivisionName(line) }}: {{ line.max_ma }} to {{ line.min_ma }} million years ago<br></div>
         {% endif %}
         {% endfor %}
 

@@ -32,13 +32,13 @@
     <div class="flash">{{ message }}</div><br>
   {% endfor %}
 
+  <form action="/cancel" align="right">
+<input type="submit" name="cancel" value="CANCEL AND START OVER"></input>
+</form>
   {% block home %}{% endblock %}
   {% block map %}{% endblock %}
   {% block locationmap %}{% endblock %}
 
-  <form action="/cancel" align="right">
-<input type="submit" name="cancel" value="CANCEL AND START OVER"></input>
-</form>
 </div>
 </div>
 <div class="component_bottomcredits">
