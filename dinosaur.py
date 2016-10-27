@@ -127,9 +127,9 @@ def start_here():
         ('chkTrilobites', 'trilobites', 'Trilobites',0),
         ('chkChordates', 'chordates', 'All chordates (animals with backbones)',0),
         ]
-    allGeoTimes = GeoTime.query.order_by(GeoTime.max_ma.desc(),GeoTime.scale_level).all()
+    allGeoTimes = GeoTime.query.order_by(GeoTime.min_ma,GeoTime.scale_level).all()
 
-    return render_template('home.html', searchresults=None, taxonRadioButtonList=taxonRadioButtonList,allGeoTimes=allGeoTimes,getTimeScaleDivisionName=getTimeScaleDivisionName,round=round,int=int)
+    return render_template('home.html', searchresults=None, taxonRadioButtonList=taxonRadioButtonList,allGeoTimes=allGeoTimes,getTimeScaleDivisionName=getTimeScaleDivisionName,round=round)
 
 
 
@@ -261,7 +261,7 @@ def getLocation(nation,state,county,geocomments):
                     location = (state + ", " + nation)
                 else:
                     location = (county + ", " + state + ", " + nation)
-        elif (nation == 'United States'):
+        elif (nation == 'United States') or (nation == 'US'):
             if (county == None):
                 location = state
             else:
@@ -351,8 +351,8 @@ def get_markers(allFossils):
         mapflagCaption = "<b style='color:red;'>" + fossilName + "</b>. " + location + ". " + age + "."
         # print("CAPTION: " + mapflagCaption)
         coords_and_mapFlag = [coordinatePairs[0],coordinatePairs[1],mapflagCaption]
-        # print("coordinatePairs: " + str(coordinatePairs[0]) + ", " + str(coordinatePairs[1]))
-        # print ("PHYLUM: " + str(taxonomy['phylum']) + ", CLASS: " + str(taxonomy['class']) + ", ORDER: " + str(taxonomy['order']) + ", FAMILY: " + str(taxonomy['family']) + ", GENUS: " + str(taxonomy['genus']))
+        print("coordinatePairs: " + str(coordinatePairs[0]) + ", " + str(coordinatePairs[1]))
+        print("PHYLUM: " + str(taxonomy['phylum']) + ", CLASS: " + str(taxonomy['class']) + ", ORDER: " + str(taxonomy['order']) + ", FAMILY: " + str(taxonomy['family']) + ", GENUS: " + str(taxonomy['genus']))
         if (taxonomy['class'] == 'Trilobita'):
             icon = '/static/images/mapicons/trilobite.png'
         elif (taxonomy['class'] == 'Saurischia'):
@@ -386,6 +386,7 @@ def get_markers(allFossils):
 def fossilsearch():
     # This downloads the JSON data for a search on PaleoBioDB. "taxon_name" returns just that taxon, while "base_name" returns taxon + all subtaxa (genus/species names). Search multiple taxa with comma separator. Wildcards include %: "Stegosaur%" pulls up both Stegosaurus and Stegosauridae. https://paleobiodb.org/data1.2/general/taxon_names_doc.htm
     searchTaxon = getSearchTaxon(request.args.get('taxonquery'), request.args.get('taxonradio'))
+    print('searchTaxon =' + str(searchTaxon))
     baseNameString = getbaseNameString(searchTaxon)
     searchLocation = request.args.get('locationquery')
     searchRadius = int(request.args.get('degrees'))
@@ -512,10 +513,14 @@ def getZoomNumber(searchLocation,searchRadius):
 
 def getsearchGeoTimeString(searchGeoTime):
     if (searchGeoTime == None):
-        return ""
+        searchGeoTimeString = ''
+    elif (searchGeoTime == 'allpasteras'):
+        searchGeoTimeString = ''
+    elif (searchGeoTime == 'precambrian'):
+        searchGeoTimeString = '&min_ma=541'
     else:
         searchGeoTimeString = '&interval=' + searchGeoTime
-        return searchGeoTimeString
+    return searchGeoTimeString
 
 @app.route('/cancel')
 def cancel():

@@ -41,12 +41,14 @@
     </div></div>
 <div class="innerflex1">
 <div>    ... <B>from this time period</B>:<br></div><div><br>
+        <div style='background:white;'><input type='radio' name='geotimeradio' id="All past eras" value="allpasteras" checked="checked" onclick="$('#geotimequery').html(' from the entire geological record')">The <b>entire geological record</b> <br></div>
           {% for line in allGeoTimes %}
           {% if ((line.scale_level < 4) and (line.scale_level > 1)) and (line.max_ma < 550)%}
        <div style='background:{{ line.color }};'>      {% for x in range(2, line.scale_level) %}&nbsp;&nbsp;&nbsp;{% endfor %}
         <input type='radio' name='geotimeradio' id="{{ line.interval_name }}" value="{{ line.interval_name }}" onclick="$('#geotimequery').html(' from the {{ line.interval_name }}</b> {{ getTimeScaleDivisionName(line) }} ({{ line.max_ma }}mya)')"><b>{{ line.interval_name }}</b> {{ getTimeScaleDivisionName(line) }} ({{ round(line.max_ma,1) }}-{{ round(line.min_ma,1) }}mya)<br></div>
         {% endif %}
         {% endfor %}
+        <div style='background:#F73563;'><input type='radio' name='geotimeradio' id="Precambrian" value="precambrian" onclick="$('#geotimequery').html(' from the Precambrian (541 million to 4.6 billion years ago)')"><b>Precambrian</b> (4.6 billion-541mya)<br></div>
         <br><br>
     <i>(Leave this blank to search <b>all time periods</b>)</i>
 </div>
