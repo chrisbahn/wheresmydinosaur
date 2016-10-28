@@ -13,7 +13,7 @@
    <div class="component_searchbox"> <input type="submit" value="SEARCH"></input><input type="reset" value="CLEAR SEARCH FIELDS">
 <div class="innerflexbox">
 <div class="innerflex1">
-<div>    <B>Look for these fossils</B>...</div><div><br>
+<div>    <B>Look for these fossils</B>...</div><div style="font-size:85%";><br>
       {% for item in taxonRadioButtonList %}
             {% for x in range(0, item[3]) %}&nbsp;&nbsp;&nbsp;{% endfor %}
         <label for="{{ item[0] }}"><input type='radio' name='taxonradio' id="{{ item[0] }}" value="{{ item[1] }}" onclick="$('#taxonquery').html('{{ item[2] }}')"> {{ item[2] }}</label><br>
@@ -41,14 +41,14 @@
     </div></div>
 <div class="innerflex1">
 <div>    ... <B>from this time period</B>:<br></div><div><br>
-        <div style='background:white;'><input type='radio' name='geotimeradio' id="All past eras" value="allpasteras" checked="checked" onclick="$('#geotimequery').html(' from the entire geological record')">The <b>entire geological record</b> <br></div>
+        <div style='background:white; font-size:85%'><input type='radio' name='geotimeradio' id="All past eras" value="allpasteras" checked="checked" onclick="$('#geotimequery').html(' from the entire geological record')">The <b>entire geological record</b> <br></div>
           {% for line in allGeoTimes %}
           {% if ((line.scale_level < 4) and (line.scale_level > 1)) and (line.max_ma < 550)%}
-       <div style='background:{{ line.color }};'>      {% for x in range(2, line.scale_level) %}&nbsp;&nbsp;&nbsp;{% endfor %}
+       <div style='background:{{ line.color }}; font-size:85%';>      {% for x in range(2, line.scale_level) %}&nbsp;&nbsp;&nbsp;{% endfor %}
         <input type='radio' name='geotimeradio' id="{{ line.interval_name }}" value="{{ line.interval_name }}" onclick="$('#geotimequery').html(' from the {{ line.interval_name }}</b> {{ getTimeScaleDivisionName(line) }} ({{ line.max_ma }}mya)')"><b>{{ line.interval_name }}</b> {{ getTimeScaleDivisionName(line) }} ({{ round(line.max_ma,1) }}-{{ round(line.min_ma,1) }}mya)<br></div>
         {% endif %}
         {% endfor %}
-        <div style='background:#F73563;'><input type='radio' name='geotimeradio' id="Precambrian" value="precambrian" onclick="$('#geotimequery').html(' from the Precambrian (541 million to 4.6 billion years ago)')"><b>Precambrian</b> (4.6 billion-541mya)<br></div>
+        <div style='background:#F73563; font-size:85%'><input type='radio' name='geotimeradio' id="Precambrian" value="precambrian" onclick="$('#geotimequery').html(' from the Precambrian (541 million to 4.6 billion years ago)')"><b>Precambrian</b> (4.6 billion-541mya)<br></div>
         <br><br>
     <i>(Leave this blank to search <b>all time periods</b>)</i>
 </div>
@@ -57,14 +57,35 @@
    </form>
 
 
-
-
+    <div class="flexbox">
+<div class="flexleftside">
 <B>Geologic ages of the Earth:</B>
           {% for line in allGeoTimes %}
-          {% if line.scale_level < 6 %}
-       <div style='background:{{ line.color }};'>      {% for x in range(0, line.scale_level) %}&nbsp;&nbsp;&nbsp;{% endfor %}
-              &#0149; <b>{{ line.interval_name }}</b> {{ getTimeScaleDivisionName(line) }}: {{ line.max_ma }} to {{ line.min_ma }} million years ago<br></div>
-        {% endif %}
+            {% if line.scale_level < 6 %}
+                <div style='background:{{ line.color }}; font-size:85%'>      {% for x in range(1, line.scale_level) %}&nbsp;&nbsp;&nbsp;{% endfor %}
+                &#0149; <b><a href="https://en.m.wikipedia.org/wiki/{{ line.interval_name }}" target="iframe_a">{{ line.interval_name }}</a></b> {{ getTimeScaleDivisionName(line) }}:
+                {% if (line.max_ma < 1) %}
+                    {% if (line.min_ma == 0) %}
+                        present-{{ round((line.max_ma*1000),1) }} thousand years ago
+                    {% else %}
+                        {{ round((line.min_ma*1000),1) }}-{{ round((line.max_ma*1000),1) }} thousand years ago
+                    {% endif %}
+                {% else %}
+                    {% if (line.min_ma == 0) %}
+                        present-{{ round((line.max_ma),1) }} million years ago
+                    {% else %}
+                        {{ round((line.min_ma),1) }}-{{ round(line.max_ma,1) }} million years ago
+                    {% endif %}
+                {% endif %}
+            {% endif %}
+                <br></div>
         {% endfor %}
+
+
+</div>
+<div class="flexrightside">
+<iframe src="demo_iframe.htm" width="450px" height="2000px" name="iframe_a"></iframe>
+</div>
+</div>
 
 {% endblock %}

@@ -5,8 +5,8 @@ h1              { border-bottom: 2px solid #006600; }
 h2              { font-size: 1.2em; }
 
 .flexbox        { margin: 2em auto; display: -webkit-flex; display: flex; max-width: 900px; }
-.page           { margin: 2em auto; border: 5px solid #006600; padding: 0.8em; background: #ccffcc; min-width: 80%; flex-grow: 0; }
-.twittertimeline { margin: 2em auto; border: 5px solid #006600; padding: 0.8em; background: #cccccc; flex-grow: 1; }
+.flexleftside           { margin: 2em auto; border: 0px solid #006600; padding: 0.8em; background: #ccffcc; min-width: 50%; flex-grow: 0; }
+.flexrightside { margin: 2em auto; border: 5px solid #006600; padding: 0.8em; background: #cccccc; flex-grow: 1; }
 
 .component      { background-color: #66cc66; color: black; margin: 20px 0 20px 0; padding: 10px; border: 1px solid #000000;}
 .component_searchbox      { background-color: #66cc66; color: black; margin: 2px 0 2px 0; padding: 1px; min-height: 140px; border: 1px solid #000000;}

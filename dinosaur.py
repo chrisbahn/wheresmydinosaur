@@ -11,8 +11,6 @@ import geocoder # https://pypi.python.org/pypi/geocoder
 import pycountry # https://pypi.python.org/pypi/pycountry
 from flask_sqlalchemy import SQLAlchemy
 
-# import pywikibot # https://www.mediawiki.org/wiki/Manual:Pywikibot/Installation
-
 app = Flask(__name__)
 
 # Load default config and override config from an environment variable
@@ -496,6 +494,9 @@ def getsearchGeoTimeString(searchGeoTime):
 	else:
 		searchGeoTimeString = '&interval=' + searchGeoTime
 	return searchGeoTimeString
+
+
+
 
 @app.route('/cancel')
 def cancel():
